@@ -1,1 +1,1 @@
-export * from './lib/tile-view/tile-view.component';
+export * from './lib/tile-view/components';

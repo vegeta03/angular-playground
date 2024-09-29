@@ -1,1 +1,8 @@
-<p>tile-view works!</p>
+<mat-grid-list cols="2" rowHeight="fit" gutterSize="8px">
+  <mat-grid-tile *ngFor="let tile of tiles; let i = index">
+    <div class="tile-content">
+      <div class="tile-header">Window {{i + 1}}</div>
+      <div class="tile-body">Content {{i + 1}}</div>
+    </div>
+  </mat-grid-tile>
+</mat-grid-list>

@@ -1,4 +1,28 @@
 /* You can add global styles to this file, and also import other style files */
 
-html, body { height: 100%; }
-body { margin: 0; font-family: Roboto, "Helvetica Neue", sans-serif; }
+@use '@angular/material' as mat;
+@use './styles/variables' as *;
+
+// Define Material Design 3 color palette
+$md-dark-primary: #D0BCFF;
+$md-dark-on-primary: #381E72;
+$md-dark-primary-container: #4F378B;
+$md-dark-on-primary-container: #EADDFF;
+$md-dark-secondary: #CCC2DC;
+$md-dark-on-secondary: #332D41;
+$md-dark-secondary-container: #4A4458;
+$md-dark-on-secondary-container: #E8DEF8;
+$md-dark-background: #1C1B1F;
+$md-dark-on-background: #E6E1E5;
+
+html, body {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  background-color: $md-dark-background;
+  color: $md-dark-on-background;
+  font-family: 'Roboto Mono', monospace;
+}
+
+// Import Roboto Mono font
+@import url('https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@400;700&display=swap');

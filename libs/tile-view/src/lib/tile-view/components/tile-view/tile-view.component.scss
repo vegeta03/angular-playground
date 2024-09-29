@@ -1,0 +1,55 @@
+@use '@angular/material' as mat;
+@use '../../../../../../../apps/ng-play/src/styles/variables' as *;
+
+:host {
+  display: block;
+  height: 100vh;
+  padding: 8px;
+  box-sizing: border-box;
+  background-color: $md-dark-background;
+}
+
+mat-grid-list {
+  height: calc(100% - 16px);
+}
+
+mat-grid-tile {
+  background-color: $md-dark-primary-container;
+  border: 1px solid $md-dark-on-primary-container;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+  transition: all 0.3s ease;
+
+  &:hover {
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.5);
+  }
+}
+
+::ng-deep .mat-grid-tile-content {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: stretch !important;
+  margin: 4px;
+}
+
+.tile-content {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  color: $md-dark-on-primary-container;
+  font-family: 'Roboto Mono', monospace;
+}
+
+.tile-header {
+  background-color: $md-dark-secondary-container;
+  color: $md-dark-on-secondary-container;
+  padding: 4px 8px;
+  font-size: 14px;
+  font-weight: bold;
+}
+
+.tile-body {
+  flex-grow: 1;
+  padding: 8px;
+  font-size: 12px;
+  overflow: auto;
+}
