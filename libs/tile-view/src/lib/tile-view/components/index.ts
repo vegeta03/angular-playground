@@ -1,0 +1,1 @@
+export * from './tile-view/tile-view.component'
