@@ -1,19 +1,19 @@
 <div class="tile-container">
-  <div *ngFor="let tile of tiles; let i = index" 
-       class="tile" 
-       [class.focused]="tile.focused"
-       [style.width]="tile.width">
-    <div #tileContent 
-         class="tile-content" 
-         tabindex="0" 
-         (focus)="focusTile(i)">
-      <div class="tile-header">Window {{i + 1}}</div>
-      <div class="tile-body">Content {{i + 1}}</div>
+  <div
+    *ngFor="let tile of tiles; let i = index"
+    class="tile"
+    [class.focused]="tile.focused"
+    [style.width]="tile.width"
+  >
+    <div #tileContent class="tile-content" tabindex="0" (focus)="focusTile(i)">
+      <div class="tile-header">Window {{ i + 1 }}</div>
+      <div class="tile-body">Content {{ i + 1 }}</div>
     </div>
   </div>
-  <div *ngFor="let resizer of resizers; let i = index" 
-       class="resizer" 
-       (mousedown)="startResize($event, i)"
-       [style.left]="resizer.position">
-  </div>
+  <div
+    *ngFor="let resizer of resizers; let i = index"
+    class="resizer"
+    (mousedown)="startResize($event, i)"
+    [style.left]="resizer.position"
+  ></div>
 </div>

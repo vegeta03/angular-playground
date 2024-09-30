@@ -1,4 +1,14 @@
-import { Component, HostListener, OnInit, ElementRef, Renderer2, AfterViewInit, QueryList, ViewChildren, ChangeDetectorRef } from '@angular/core';
+import {
+  Component,
+  HostListener,
+  OnInit,
+  ElementRef,
+  Renderer2,
+  AfterViewInit,
+  QueryList,
+  ViewChildren,
+  ChangeDetectorRef,
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
 
 interface Tile {
@@ -22,11 +32,9 @@ export class TileViewComponent implements OnInit, AfterViewInit {
 
   tiles: Tile[] = [
     { width: '50%', focused: false },
-    { width: '50%', focused: false }
+    { width: '50%', focused: false },
   ];
-  resizers: Resizer[] = [
-    { position: '50%' }
-  ];
+  resizers: Resizer[] = [{ position: '50%' }];
   isResizing = false;
   activeResizer = 0;
   startX: number = 0;
@@ -54,7 +62,7 @@ export class TileViewComponent implements OnInit, AfterViewInit {
     this.isResizing = true;
     this.activeResizer = index;
     this.startX = event.clientX;
-    this.startWidths = this.tiles.map(tile => tile.width);
+    this.startWidths = this.tiles.map((tile) => tile.width);
     this.renderer.addClass(event.target, 'active');
     event.preventDefault();
   }
@@ -69,7 +77,8 @@ export class TileViewComponent implements OnInit, AfterViewInit {
   onMouseUp() {
     if (!this.isResizing) return;
     this.isResizing = false;
-    const activeResizerElement = this.el.nativeElement.querySelector('.resizer.active');
+    const activeResizerElement =
+      this.el.nativeElement.querySelector('.resizer.active');
     if (activeResizerElement) {
       this.renderer.removeClass(activeResizerElement, 'active');
     }
@@ -142,8 +151,10 @@ export class TileViewComponent implements OnInit, AfterViewInit {
     const dx = event.clientX - this.startX;
     const percentageDelta = (dx / this.containerWidth) * 100;
 
-    const newLeftWidth = parseFloat(this.startWidths[this.activeResizer]) + percentageDelta;
-    const newRightWidth = parseFloat(this.startWidths[this.activeResizer + 1]) - percentageDelta;
+    const newLeftWidth =
+      parseFloat(this.startWidths[this.activeResizer]) + percentageDelta;
+    const newRightWidth =
+      parseFloat(this.startWidths[this.activeResizer + 1]) - percentageDelta;
 
     if (newLeftWidth > 10 && newRightWidth > 10) {
       this.tiles[this.activeResizer].width = `${newLeftWidth}%`;

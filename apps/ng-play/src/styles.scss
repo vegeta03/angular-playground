@@ -4,18 +4,19 @@
 @use './styles/variables' as *;
 
 // Define Material Design 3 color palette
-$md-dark-primary: #D0BCFF;
-$md-dark-on-primary: #381E72;
-$md-dark-primary-container: #4F378B;
-$md-dark-on-primary-container: #EADDFF;
-$md-dark-secondary: #CCC2DC;
-$md-dark-on-secondary: #332D41;
-$md-dark-secondary-container: #4A4458;
-$md-dark-on-secondary-container: #E8DEF8;
-$md-dark-background: #1C1B1F;
-$md-dark-on-background: #E6E1E5;
+$md-dark-primary: #d0bcff;
+$md-dark-on-primary: #381e72;
+$md-dark-primary-container: #4f378b;
+$md-dark-on-primary-container: #eaddff;
+$md-dark-secondary: #ccc2dc;
+$md-dark-on-secondary: #332d41;
+$md-dark-secondary-container: #4a4458;
+$md-dark-on-secondary-container: #e8def8;
+$md-dark-background: #1c1b1f;
+$md-dark-on-background: #e6e1e5;
 
-html, body {
+html,
+body {
   height: 100%;
   margin: 0;
   padding: 0;
