@@ -8,16 +8,14 @@ import {
   QueryList,
   ViewChildren,
   ChangeDetectorRef,
+  signal,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 
 interface Tile {
   width: string;
+  height: string;
   focused: boolean;
-}
-
-interface Resizer {
-  position: string;
 }
 
 @Component({
@@ -30,18 +28,19 @@ interface Resizer {
 export class TileViewComponent implements OnInit, AfterViewInit {
   @ViewChildren('tileContent') tileContents!: QueryList<ElementRef>;
 
-  tiles: Tile[] = [
-    { width: '50%', focused: false },
-    { width: '50%', focused: false },
-  ];
-  resizers: Resizer[] = [{ position: '50%' }];
+  tiles = signal<[Tile, Tile]>([
+    { width: '100%', height: '50%', focused: true },
+    { width: '100%', height: '50%', focused: false },
+  ]);
+  isVerticalSplit = signal<boolean>(false);
   isResizing = false;
-  activeResizer = 0;
   startX: number = 0;
+  startY: number = 0;
   startWidths: string[] = [];
+  startHeights: string[] = [];
   containerWidth: number = 0;
-  focusedTileIndex: number = 0;
-  resizeStep: number = 5; // Percentage to resize on each key press
+  containerHeight: number = 0;
+  focusedTileIndex = signal<number>(0);
 
   constructor(
     private el: ElementRef,
@@ -50,19 +49,20 @@ export class TileViewComponent implements OnInit, AfterViewInit {
   ) {}
 
   ngOnInit() {
-    this.updateResizerPositions();
     this.containerWidth = this.el.nativeElement.offsetWidth;
+    this.containerHeight = this.el.nativeElement.offsetHeight;
   }
 
   ngAfterViewInit() {
     this.focusTile(0);
   }
 
-  startResize(event: MouseEvent, index: number) {
+  startResize(event: MouseEvent) {
     this.isResizing = true;
-    this.activeResizer = index;
     this.startX = event.clientX;
-    this.startWidths = this.tiles.map((tile) => tile.width);
+    this.startY = event.clientY;
+    this.startWidths = this.tiles().map((tile) => tile.width);
+    this.startHeights = this.tiles().map((tile) => tile.height);
     this.renderer.addClass(event.target, 'active');
     event.preventDefault();
   }
@@ -88,26 +88,50 @@ export class TileViewComponent implements OnInit, AfterViewInit {
   onKeyDown(event: KeyboardEvent) {
     if (event.altKey && !event.ctrlKey && !event.metaKey) {
       if (event.shiftKey) {
-        // Resizing with Shift + Alt + Arrow keys
-        switch (event.key) {
-          case 'ArrowLeft':
-            this.resizeWithKeyboard('left');
+        // Window selection shortcuts
+        switch (event.key.toLowerCase()) {
+          case 'i':
+            if (!this.isVerticalSplit()) this.selectWindow('up');
             event.preventDefault();
             break;
-          case 'ArrowRight':
-            this.resizeWithKeyboard('right');
+          case 'k':
+            if (!this.isVerticalSplit()) this.selectWindow('down');
+            event.preventDefault();
+            break;
+          case 'j':
+            if (this.isVerticalSplit()) this.selectWindow('left');
+            event.preventDefault();
+            break;
+          case 'l':
+            if (this.isVerticalSplit()) this.selectWindow('right');
             event.preventDefault();
             break;
         }
       } else {
-        // Selecting windows with Alt + Arrow keys
-        switch (event.key) {
-          case 'ArrowLeft':
-            this.moveFocus('left');
+        // Existing shortcuts for splitting and resizing
+        switch (event.key.toLowerCase()) {
+          case 'h':
+            this.splitHorizontally();
             event.preventDefault();
             break;
-          case 'ArrowRight':
-            this.moveFocus('right');
+          case 'v':
+            this.splitVertically();
+            event.preventDefault();
+            break;
+          case 'i':
+            this.resizeWithKeyboard('up');
+            event.preventDefault();
+            break;
+          case 'k':
+            this.resizeWithKeyboard('down');
+            event.preventDefault();
+            break;
+          case 'j':
+            this.resizeWithKeyboard('left');
+            event.preventDefault();
+            break;
+          case 'l':
+            this.resizeWithKeyboard('right');
             event.preventDefault();
             break;
         }
@@ -115,83 +139,113 @@ export class TileViewComponent implements OnInit, AfterViewInit {
     }
   }
 
-  private resizeWithKeyboard(direction: 'left' | 'right') {
-    const currentTileIndex = this.focusedTileIndex;
-    let leftTileIndex: number, rightTileIndex: number;
+  private selectWindow(direction: 'up' | 'down' | 'left' | 'right') {
+    const currentIndex = this.focusedTileIndex();
+    let newIndex: number;
 
-    if (direction === 'right') {
-      leftTileIndex = currentTileIndex;
-      rightTileIndex = currentTileIndex + 1;
-    } else {
-      leftTileIndex = currentTileIndex - 1;
-      rightTileIndex = currentTileIndex;
+    switch (direction) {
+      case 'up':
+      case 'left':
+        newIndex = 0;
+        break;
+      case 'down':
+      case 'right':
+        newIndex = 1;
+        break;
     }
 
-    if (leftTileIndex < 0 || rightTileIndex >= this.tiles.length) return;
-
-    const leftTile = this.tiles[leftTileIndex];
-    const rightTile = this.tiles[rightTileIndex];
-
-    const leftWidth = parseFloat(leftTile.width);
-    const rightWidth = parseFloat(rightTile.width);
-
-    if (direction === 'right' && leftWidth + this.resizeStep <= 90) {
-      leftTile.width = `${leftWidth + this.resizeStep}%`;
-      rightTile.width = `${rightWidth - this.resizeStep}%`;
-    } else if (direction === 'left' && rightWidth + this.resizeStep <= 90) {
-      leftTile.width = `${leftWidth - this.resizeStep}%`;
-      rightTile.width = `${rightWidth + this.resizeStep}%`;
-    }
-
-    this.updateResizerPositions();
-    this.cdr.detectChanges();
-  }
-
-  private resize(event: MouseEvent) {
-    const dx = event.clientX - this.startX;
-    const percentageDelta = (dx / this.containerWidth) * 100;
-
-    const newLeftWidth =
-      parseFloat(this.startWidths[this.activeResizer]) + percentageDelta;
-    const newRightWidth =
-      parseFloat(this.startWidths[this.activeResizer + 1]) - percentageDelta;
-
-    if (newLeftWidth > 10 && newRightWidth > 10) {
-      this.tiles[this.activeResizer].width = `${newLeftWidth}%`;
-      this.tiles[this.activeResizer + 1].width = `${newRightWidth}%`;
-      this.updateResizerPositions();
-      this.cdr.detectChanges();
-    }
-  }
-
-  private moveFocus(direction: 'left' | 'right') {
-    let newIndex = this.focusedTileIndex;
-
-    if (direction === 'left') {
-      newIndex = Math.max(0, this.focusedTileIndex - 1);
-    } else {
-      newIndex = Math.min(this.tiles.length - 1, this.focusedTileIndex + 1);
-    }
-
-    if (newIndex !== this.focusedTileIndex) {
+    if (newIndex !== currentIndex) {
       this.focusTile(newIndex);
     }
   }
 
+  private resizeWithKeyboard(direction: 'up' | 'down' | 'left' | 'right') {
+    const isVertical = this.isVerticalSplit();
+    const resizeStep = 5; // Percentage to resize on each key press
+    let newFirstSize: number;
+
+    if (isVertical) {
+      newFirstSize = parseFloat(this.tiles()[0].width);
+      if (direction === 'left') newFirstSize -= resizeStep;
+      if (direction === 'right') newFirstSize += resizeStep;
+    } else {
+      newFirstSize = parseFloat(this.tiles()[0].height);
+      if (direction === 'up') newFirstSize -= resizeStep;
+      if (direction === 'down') newFirstSize += resizeStep;
+    }
+
+    newFirstSize = Math.max(10, Math.min(90, newFirstSize));
+    const newSecondSize = 100 - newFirstSize;
+
+    this.tiles.update(([first, second]) => [
+      {
+        ...first,
+        width: isVertical ? `${newFirstSize}%` : '100%',
+        height: isVertical ? '100%' : `${newFirstSize}%`,
+      },
+      {
+        ...second,
+        width: isVertical ? `${newSecondSize}%` : '100%',
+        height: isVertical ? '100%' : `${newSecondSize}%`,
+      },
+    ]);
+    this.cdr.detectChanges();
+  }
+
+  private resize(event: MouseEvent) {
+    const isVertical = this.isVerticalSplit();
+    const dx = event.clientX - this.startX;
+    const dy = event.clientY - this.startY;
+    const percentageDelta = isVertical
+      ? (dx / this.containerWidth) * 100
+      : (dy / this.containerHeight) * 100;
+
+    let newFirstSize = isVertical
+      ? parseFloat(this.startWidths[0]) + percentageDelta
+      : parseFloat(this.startHeights[0]) + percentageDelta;
+    let newSecondSize = 100 - newFirstSize;
+
+    if (newFirstSize > 10 && newSecondSize > 10) {
+      this.tiles.update(([first, second]) => [
+        {
+          ...first,
+          width: isVertical ? `${newFirstSize}%` : '100%',
+          height: isVertical ? '100%' : `${newFirstSize}%`,
+        },
+        {
+          ...second,
+          width: isVertical ? `${newSecondSize}%` : '100%',
+          height: isVertical ? '100%' : `${newSecondSize}%`,
+        },
+      ]);
+      this.cdr.detectChanges();
+    }
+  }
+
   public focusTile(index: number) {
-    this.tiles.forEach((tile, i) => {
-      tile.focused = i === index;
-    });
-    this.focusedTileIndex = index;
+    this.tiles.update(tiles => 
+      tiles.map((tile, i) => ({ ...tile, focused: i === index })) as [Tile, Tile]
+    );
+    this.focusedTileIndex.set(index);
     this.tileContents.toArray()[index].nativeElement.focus();
     this.cdr.detectChanges();
   }
 
-  private updateResizerPositions() {
-    let position = 0;
-    this.resizers.forEach((resizer, index) => {
-      position += parseFloat(this.tiles[index].width);
-      resizer.position = `${position}%`;
-    });
+  private splitHorizontally() {
+    this.isVerticalSplit.set(false);
+    this.tiles.set([
+      { width: '100%', height: '50%', focused: true },
+      { width: '100%', height: '50%', focused: false },
+    ]);
+    this.cdr.detectChanges();
+  }
+
+  private splitVertically() {
+    this.isVerticalSplit.set(true);
+    this.tiles.set([
+      { width: '50%', height: '100%', focused: true },
+      { width: '50%', height: '100%', focused: false },
+    ]);
+    this.cdr.detectChanges();
   }
 }
