@@ -1,8 +1,13 @@
-<mat-grid-list cols="2" rowHeight="fit" gutterSize="8px">
-  <mat-grid-tile *ngFor="let tile of tiles; let i = index">
+<div class="tile-container">
+  <div *ngFor="let tile of tiles; let i = index" class="tile" [style.width]="tile.width">
     <div class="tile-content">
       <div class="tile-header">Window {{i + 1}}</div>
       <div class="tile-body">Content {{i + 1}}</div>
     </div>
-  </mat-grid-tile>
-</mat-grid-list>
+  </div>
+  <div *ngFor="let resizer of resizers; let i = index" 
+       class="resizer" 
+       (mousedown)="startResize($event, i)"
+       [style.left]="resizer.position">
+  </div>
+</div>

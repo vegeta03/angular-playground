@@ -1,19 +1,20 @@
-@use '@angular/material' as mat;
 @use '../../../../../../../apps/ng-play/src/styles/variables' as *;
 
 :host {
   display: block;
   height: 100vh;
-  padding: 8px;
   box-sizing: border-box;
   background-color: $md-dark-background;
 }
 
-mat-grid-list {
-  height: calc(100% - 16px);
+.tile-container {
+  display: flex;
+  position: relative;
+  height: 100%;
 }
 
-mat-grid-tile {
+.tile {
+  flex-grow: 1;
   background-color: $md-dark-primary-container;
   border: 1px solid $md-dark-on-primary-container;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
@@ -22,13 +23,6 @@ mat-grid-tile {
   &:hover {
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.5);
   }
-}
-
-::ng-deep .mat-grid-tile-content {
-  display: flex !important;
-  flex-direction: column !important;
-  align-items: stretch !important;
-  margin: 4px;
 }
 
 .tile-content {
@@ -52,4 +46,19 @@ mat-grid-tile {
   padding: 8px;
   font-size: 12px;
   overflow: auto;
+}
+
+.resizer {
+  position: absolute;
+  top: 0;
+  width: 8px;
+  height: 100%;
+  background-color: $md-dark-secondary-container;
+  cursor: col-resize;
+  z-index: 1000;
+  transform: translateX(-50%);
+
+  &:hover {
+    background-color: $md-dark-on-secondary-container;
+  }
 }
