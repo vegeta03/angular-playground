@@ -1,6 +1,11 @@
 @use '../../../../../../../apps/ng-play/src/styles/variables' as *;
 
 :host {
+  --tile-border-color: #{$md-dark-on-primary-container};
+  --tile-background: #{$md-dark-primary-container};
+  --resizer-color: #{$md-dark-secondary-container};
+  --resizer-hover-color: #{$md-dark-on-secondary-container};
+
   display: block;
   height: 100vh;
   box-sizing: border-box;
@@ -15,10 +20,10 @@
 
 .tile {
   flex-grow: 1;
-  background-color: $md-dark-primary-container;
-  border: 1px solid $md-dark-on-primary-container;
+  background-color: var(--tile-background);
+  border: 1px solid var(--tile-border-color);
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
-  transition: all 0.3s ease;
+  transition: box-shadow 0.3s ease;
 
   &:hover {
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.5);
@@ -53,12 +58,13 @@
   top: 0;
   width: 8px;
   height: 100%;
-  background-color: $md-dark-secondary-container;
+  background-color: var(--resizer-color);
   cursor: col-resize;
   z-index: 1000;
   transform: translateX(-50%);
+  transition: background-color 0.2s ease;
 
-  &:hover {
-    background-color: $md-dark-on-secondary-container;
+  &:hover, &.active {
+    background-color: var(--resizer-hover-color);
   }
 }

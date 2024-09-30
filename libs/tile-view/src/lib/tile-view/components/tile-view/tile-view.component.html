@@ -1,5 +1,5 @@
 <div class="tile-container">
-  <div *ngFor="let tile of tiles; let i = index" class="tile" [style.width]="tile.width">
+  <div *ngFor="let tile of tiles; let i = index" class="tile" [ngStyle]="{'width': tile.width}">
     <div class="tile-content">
       <div class="tile-header">Window {{i + 1}}</div>
       <div class="tile-body">Content {{i + 1}}</div>
@@ -8,6 +8,6 @@
   <div *ngFor="let resizer of resizers; let i = index" 
        class="resizer" 
        (mousedown)="startResize($event, i)"
-       [style.left]="resizer.position">
+       [ngStyle]="{'left': resizer.position}">
   </div>
 </div>

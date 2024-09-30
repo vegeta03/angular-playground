@@ -1,4 +1,4 @@
-import { Component, HostListener, OnInit } from '@angular/core';
+import { Component, HostListener, OnInit, ElementRef, Renderer2 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 
 interface Tile {
@@ -28,9 +28,13 @@ export class TileViewComponent implements OnInit {
   activeResizer = 0;
   startX: number = 0;
   startWidths: string[] = [];
+  containerWidth: number = 0;
+
+  constructor(private el: ElementRef, private renderer: Renderer2) {}
 
   ngOnInit() {
     this.updateResizerPositions();
+    this.containerWidth = this.el.nativeElement.offsetWidth;
   }
 
   startResize(event: MouseEvent, index: number) {
@@ -38,16 +42,29 @@ export class TileViewComponent implements OnInit {
     this.activeResizer = index;
     this.startX = event.clientX;
     this.startWidths = this.tiles.map(tile => tile.width);
+    this.renderer.addClass(event.target, 'active');
     event.preventDefault();
   }
 
   @HostListener('window:mousemove', ['$event'])
   onMouseMove(event: MouseEvent) {
     if (!this.isResizing) return;
+    requestAnimationFrame(() => this.resize(event));
+  }
 
+  @HostListener('window:mouseup')
+  onMouseUp() {
+    if (!this.isResizing) return;
+    this.isResizing = false;
+    const activeResizerElement = this.el.nativeElement.querySelector('.resizer.active');
+    if (activeResizerElement) {
+      this.renderer.removeClass(activeResizerElement, 'active');
+    }
+  }
+
+  private resize(event: MouseEvent) {
     const dx = event.clientX - this.startX;
-    const containerWidth = window.innerWidth; // Changed this line
-    const percentageDelta = (dx / containerWidth) * 100;
+    const percentageDelta = (dx / this.containerWidth) * 100;
 
     const newLeftWidth = parseFloat(this.startWidths[this.activeResizer]) + percentageDelta;
     const newRightWidth = parseFloat(this.startWidths[this.activeResizer + 1]) - percentageDelta;
@@ -57,11 +74,6 @@ export class TileViewComponent implements OnInit {
       this.tiles[this.activeResizer + 1].width = `${newRightWidth}%`;
       this.updateResizerPositions();
     }
-  }
-
-  @HostListener('window:mouseup')
-  onMouseUp() {
-    this.isResizing = false;
   }
 
   private updateResizerPositions() {
