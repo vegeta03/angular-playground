@@ -7,16 +7,17 @@ import {
   AfterViewInit,
   QueryList,
   ViewChildren,
-  ChangeDetectorRef,
   signal,
+  WritableSignal,
+  inject,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 
-interface Tile {
+type Tile = {
   width: string;
   height: string;
   focused: boolean;
-}
+};
 
 @Component({
   selector: 'lib-tile-view',
@@ -28,11 +29,16 @@ interface Tile {
 export class TileViewComponent implements OnInit, AfterViewInit {
   @ViewChildren('tileContent') tileContents!: QueryList<ElementRef>;
 
-  tiles = signal<[Tile, Tile]>([
+  private el = inject(ElementRef);
+  private renderer = inject(Renderer2);
+
+  tiles: WritableSignal<[Tile, Tile]> = signal([
     { width: '100%', height: '50%', focused: true },
     { width: '100%', height: '50%', focused: false },
   ]);
-  isVerticalSplit = signal<boolean>(false);
+  isVerticalSplit: WritableSignal<boolean> = signal(false);
+  focusedTileIndex: WritableSignal<number> = signal(0);
+
   isResizing = false;
   startX: number = 0;
   startY: number = 0;
@@ -40,13 +46,6 @@ export class TileViewComponent implements OnInit, AfterViewInit {
   startHeights: string[] = [];
   containerWidth: number = 0;
   containerHeight: number = 0;
-  focusedTileIndex = signal<number>(0);
-
-  constructor(
-    private el: ElementRef,
-    private renderer: Renderer2,
-    private cdr: ChangeDetectorRef
-  ) {}
 
   ngOnInit() {
     this.containerWidth = this.el.nativeElement.offsetWidth;
@@ -88,7 +87,6 @@ export class TileViewComponent implements OnInit, AfterViewInit {
   onKeyDown(event: KeyboardEvent) {
     if (event.altKey && !event.ctrlKey && !event.metaKey) {
       if (event.shiftKey) {
-        // Window selection shortcuts
         switch (event.key.toLowerCase()) {
           case 'i':
             if (!this.isVerticalSplit()) this.selectWindow('up');
@@ -108,7 +106,6 @@ export class TileViewComponent implements OnInit, AfterViewInit {
             break;
         }
       } else {
-        // Existing shortcuts for splitting and resizing
         switch (event.key.toLowerCase()) {
           case 'h':
             this.splitHorizontally();
@@ -189,7 +186,6 @@ export class TileViewComponent implements OnInit, AfterViewInit {
         height: isVertical ? '100%' : `${newSecondSize}%`,
       },
     ]);
-    this.cdr.detectChanges();
   }
 
   private resize(event: MouseEvent) {
@@ -218,17 +214,19 @@ export class TileViewComponent implements OnInit, AfterViewInit {
           height: isVertical ? '100%' : `${newSecondSize}%`,
         },
       ]);
-      this.cdr.detectChanges();
     }
   }
 
   public focusTile(index: number) {
-    this.tiles.update(tiles => 
-      tiles.map((tile, i) => ({ ...tile, focused: i === index })) as [Tile, Tile]
+    this.tiles.update(
+      (tiles) =>
+        tiles.map((tile, i) => ({ ...tile, focused: i === index })) as [
+          Tile,
+          Tile
+        ]
     );
     this.focusedTileIndex.set(index);
     this.tileContents.toArray()[index].nativeElement.focus();
-    this.cdr.detectChanges();
   }
 
   private splitHorizontally() {
@@ -237,7 +235,6 @@ export class TileViewComponent implements OnInit, AfterViewInit {
       { width: '100%', height: '50%', focused: true },
       { width: '100%', height: '50%', focused: false },
     ]);
-    this.cdr.detectChanges();
   }
 
   private splitVertically() {
@@ -246,6 +243,5 @@ export class TileViewComponent implements OnInit, AfterViewInit {
       { width: '50%', height: '100%', focused: true },
       { width: '50%', height: '100%', focused: false },
     ]);
-    this.cdr.detectChanges();
   }
 }
