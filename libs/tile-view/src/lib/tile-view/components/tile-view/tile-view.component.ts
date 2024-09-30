@@ -1,4 +1,4 @@
-import { Component, HostListener, OnInit, ElementRef, Renderer2, AfterViewInit, QueryList, ViewChildren } from '@angular/core';
+import { Component, HostListener, OnInit, ElementRef, Renderer2, AfterViewInit, QueryList, ViewChildren, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 
 interface Tile {
@@ -33,8 +33,13 @@ export class TileViewComponent implements OnInit, AfterViewInit {
   startWidths: string[] = [];
   containerWidth: number = 0;
   focusedTileIndex: number = 0;
+  resizeStep: number = 5; // Percentage to resize on each key press
 
-  constructor(private el: ElementRef, private renderer: Renderer2) {}
+  constructor(
+    private el: ElementRef,
+    private renderer: Renderer2,
+    private cdr: ChangeDetectorRef
+  ) {}
 
   ngOnInit() {
     this.updateResizerPositions();
@@ -73,25 +78,64 @@ export class TileViewComponent implements OnInit, AfterViewInit {
   @HostListener('window:keydown', ['$event'])
   onKeyDown(event: KeyboardEvent) {
     if (event.altKey && !event.ctrlKey && !event.metaKey) {
-      switch (event.key) {
-        case 'j':
-          this.moveFocus('left');
-          event.preventDefault();
-          break;
-        case 'k':
-          this.moveFocus('down');
-          event.preventDefault();
-          break;
-        case 'l':
-          this.moveFocus('up');
-          event.preventDefault();
-          break;
-        case ';':
-          this.moveFocus('right');
-          event.preventDefault();
-          break;
+      if (event.shiftKey) {
+        // Resizing with Shift + Alt + Arrow keys
+        switch (event.key) {
+          case 'ArrowLeft':
+            this.resizeWithKeyboard('left');
+            event.preventDefault();
+            break;
+          case 'ArrowRight':
+            this.resizeWithKeyboard('right');
+            event.preventDefault();
+            break;
+        }
+      } else {
+        // Selecting windows with Alt + Arrow keys
+        switch (event.key) {
+          case 'ArrowLeft':
+            this.moveFocus('left');
+            event.preventDefault();
+            break;
+          case 'ArrowRight':
+            this.moveFocus('right');
+            event.preventDefault();
+            break;
+        }
       }
     }
+  }
+
+  private resizeWithKeyboard(direction: 'left' | 'right') {
+    const currentTileIndex = this.focusedTileIndex;
+    let leftTileIndex: number, rightTileIndex: number;
+
+    if (direction === 'right') {
+      leftTileIndex = currentTileIndex;
+      rightTileIndex = currentTileIndex + 1;
+    } else {
+      leftTileIndex = currentTileIndex - 1;
+      rightTileIndex = currentTileIndex;
+    }
+
+    if (leftTileIndex < 0 || rightTileIndex >= this.tiles.length) return;
+
+    const leftTile = this.tiles[leftTileIndex];
+    const rightTile = this.tiles[rightTileIndex];
+
+    const leftWidth = parseFloat(leftTile.width);
+    const rightWidth = parseFloat(rightTile.width);
+
+    if (direction === 'right' && leftWidth + this.resizeStep <= 90) {
+      leftTile.width = `${leftWidth + this.resizeStep}%`;
+      rightTile.width = `${rightWidth - this.resizeStep}%`;
+    } else if (direction === 'left' && rightWidth + this.resizeStep <= 90) {
+      leftTile.width = `${leftWidth - this.resizeStep}%`;
+      rightTile.width = `${rightWidth + this.resizeStep}%`;
+    }
+
+    this.updateResizerPositions();
+    this.cdr.detectChanges();
   }
 
   private resize(event: MouseEvent) {
@@ -105,23 +149,17 @@ export class TileViewComponent implements OnInit, AfterViewInit {
       this.tiles[this.activeResizer].width = `${newLeftWidth}%`;
       this.tiles[this.activeResizer + 1].width = `${newRightWidth}%`;
       this.updateResizerPositions();
+      this.cdr.detectChanges();
     }
   }
 
-  private moveFocus(direction: 'left' | 'right' | 'up' | 'down') {
+  private moveFocus(direction: 'left' | 'right') {
     let newIndex = this.focusedTileIndex;
 
-    switch (direction) {
-      case 'left':
-        newIndex = Math.max(0, this.focusedTileIndex - 1);
-        break;
-      case 'right':
-        newIndex = Math.min(this.tiles.length - 1, this.focusedTileIndex + 1);
-        break;
-      case 'up':
-      case 'down':
-        // For now, up and down do nothing as we only have a horizontal layout
-        return;
+    if (direction === 'left') {
+      newIndex = Math.max(0, this.focusedTileIndex - 1);
+    } else {
+      newIndex = Math.min(this.tiles.length - 1, this.focusedTileIndex + 1);
     }
 
     if (newIndex !== this.focusedTileIndex) {
@@ -135,6 +173,7 @@ export class TileViewComponent implements OnInit, AfterViewInit {
     });
     this.focusedTileIndex = index;
     this.tileContents.toArray()[index].nativeElement.focus();
+    this.cdr.detectChanges();
   }
 
   private updateResizerPositions() {
