@@ -1,15 +1,19 @@
 import {
   Component,
   HostListener,
-  OnInit,
   ElementRef,
   Renderer2,
-  AfterViewInit,
   QueryList,
   ViewChildren,
   signal,
-  WritableSignal,
+  computed,
+  effect,
   inject,
+  Directive,
+  Input,
+  HostBinding,
+  Pipe,
+  PipeTransform,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 
@@ -19,63 +23,87 @@ type Tile = {
   focused: boolean;
 };
 
+@Directive({
+  selector: '[libResizer]',
+  standalone: true,
+})
+export class ResizerDirective {
+  @Input() isVertical!: boolean;
+  @HostBinding('class.vertical') get vertical() { return this.isVertical; }
+  @HostBinding('style.left') @Input() left: string = '0';
+  @HostBinding('style.top') @Input() top: string = '0';
+}
+
+@Pipe({
+  name: 'percentage',
+  standalone: true,
+})
+export class PercentagePipe implements PipeTransform {
+  transform(value: number): string {
+    return `${value}%`;
+  }
+}
+
 @Component({
   selector: 'lib-tile-view',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, ResizerDirective, PercentagePipe],
   templateUrl: './tile-view.component.html',
   styleUrls: ['./tile-view.component.scss'],
 })
-export class TileViewComponent implements OnInit, AfterViewInit {
+export class TileViewComponent {
   @ViewChildren('tileContent') tileContents!: QueryList<ElementRef>;
 
   private el = inject(ElementRef);
   private renderer = inject(Renderer2);
 
-  tiles: WritableSignal<[Tile, Tile]> = signal([
+  tiles = signal<[Tile, Tile]>([
     { width: '100%', height: '50%', focused: true },
     { width: '100%', height: '50%', focused: false },
   ]);
-  isVerticalSplit: WritableSignal<boolean> = signal(false);
-  focusedTileIndex: WritableSignal<number> = signal(0);
+  isVerticalSplit = signal(false);
+  focusedTileIndex = signal(0);
 
-  isResizing = false;
-  startX: number = 0;
-  startY: number = 0;
-  startWidths: string[] = [];
-  startHeights: string[] = [];
-  containerWidth: number = 0;
-  containerHeight: number = 0;
+  isResizing = signal(false);
+  startX = signal(0);
+  startY = signal(0);
+  startWidths = signal<string[]>([]);
+  startHeights = signal<string[]>([]);
+  containerWidth = signal(0);
+  containerHeight = signal(0);
 
-  ngOnInit() {
-    this.containerWidth = this.el.nativeElement.offsetWidth;
-    this.containerHeight = this.el.nativeElement.offsetHeight;
-  }
+  resizerPosition = computed(() => {
+    const [firstTile] = this.tiles();
+    return this.isVerticalSplit() ? firstTile.width : firstTile.height;
+  });
 
-  ngAfterViewInit() {
-    this.focusTile(0);
+  constructor() {
+    effect(() => {
+      this.containerWidth.set(this.el.nativeElement.offsetWidth);
+      this.containerHeight.set(this.el.nativeElement.offsetHeight);
+    });
   }
 
   startResize(event: MouseEvent) {
-    this.isResizing = true;
-    this.startX = event.clientX;
-    this.startY = event.clientY;
-    this.startWidths = this.tiles().map((tile) => tile.width);
-    this.startHeights = this.tiles().map((tile) => tile.height);
+    this.isResizing.set(true);
+    this.startX.set(event.clientX);
+    this.startY.set(event.clientY);
+    this.startWidths.set(this.tiles().map((tile) => tile.width));
+    this.startHeights.set(this.tiles().map((tile) => tile.height));
     this.renderer.addClass(event.target, 'active');
     event.preventDefault();
   }
 
   @HostListener('window:mousemove', ['$event'])
   onMouseMove(event: MouseEvent) {
-    if (!this.isResizing) return;
+    if (!this.isResizing()) return;
     requestAnimationFrame(() => this.resize(event));
   }
 
   @HostListener('window:mouseup')
   onMouseUp() {
-    if (!this.isResizing) return;
-    this.isResizing = false;
+    if (!this.isResizing()) return;
+    this.isResizing.set(false);
     const activeResizerElement =
       this.el.nativeElement.querySelector('.resizer.active');
     if (activeResizerElement) {
@@ -87,91 +115,86 @@ export class TileViewComponent implements OnInit, AfterViewInit {
   onKeyDown(event: KeyboardEvent) {
     if (event.altKey && !event.ctrlKey && !event.metaKey) {
       if (event.shiftKey) {
-        switch (event.key.toLowerCase()) {
-          case 'i':
-            if (!this.isVerticalSplit()) this.selectWindow('up');
-            event.preventDefault();
-            break;
-          case 'k':
-            if (!this.isVerticalSplit()) this.selectWindow('down');
-            event.preventDefault();
-            break;
-          case 'j':
-            if (this.isVerticalSplit()) this.selectWindow('left');
-            event.preventDefault();
-            break;
-          case 'l':
-            if (this.isVerticalSplit()) this.selectWindow('right');
-            event.preventDefault();
-            break;
-        }
+        this.handleShiftKeyNavigation(event);
       } else {
-        switch (event.key.toLowerCase()) {
-          case 'h':
-            this.splitHorizontally();
-            event.preventDefault();
-            break;
-          case 'v':
-            this.splitVertically();
-            event.preventDefault();
-            break;
-          case 'i':
-            this.resizeWithKeyboard('up');
-            event.preventDefault();
-            break;
-          case 'k':
-            this.resizeWithKeyboard('down');
-            event.preventDefault();
-            break;
-          case 'j':
-            this.resizeWithKeyboard('left');
-            event.preventDefault();
-            break;
-          case 'l':
-            this.resizeWithKeyboard('right');
-            event.preventDefault();
-            break;
-        }
+        this.handleKeyboardActions(event);
       }
     }
   }
 
-  private selectWindow(direction: 'up' | 'down' | 'left' | 'right') {
-    const currentIndex = this.focusedTileIndex();
-    let newIndex: number;
+  private handleShiftKeyNavigation(event: KeyboardEvent) {
+    const key = event.key.toLowerCase();
+    const isVertical = this.isVerticalSplit();
+    const directions: Record<string, 'up' | 'down' | 'left' | 'right'> = {
+      i: 'up',
+      k: 'down',
+      j: 'left',
+      l: 'right'
+    };
 
-    switch (direction) {
-      case 'up':
-      case 'left':
-        newIndex = 0;
-        break;
-      case 'down':
-      case 'right':
-        newIndex = 1;
-        break;
+    if (key in directions) {
+      const direction = directions[key];
+      if ((isVertical && ['left', 'right'].includes(direction)) ||
+          (!isVertical && ['up', 'down'].includes(direction))) {
+        this.selectWindow(direction);
+        event.preventDefault();
+      }
     }
+  }
 
-    if (newIndex !== currentIndex) {
+  private handleKeyboardActions(event: KeyboardEvent) {
+    const actions: Record<string, () => void> = {
+      h: () => this.splitHorizontally(),
+      v: () => this.splitVertically(),
+      i: () => this.resizeWithKeyboard('up'),
+      k: () => this.resizeWithKeyboard('down'),
+      j: () => this.resizeWithKeyboard('left'),
+      l: () => this.resizeWithKeyboard('right')
+    };
+
+    const action = actions[event.key.toLowerCase()];
+    if (action) {
+      action();
+      event.preventDefault();
+    }
+  }
+
+  private selectWindow(direction: 'up' | 'down' | 'left' | 'right') {
+    const newIndex = ['up', 'left'].includes(direction) ? 0 : 1;
+    if (newIndex !== this.focusedTileIndex()) {
       this.focusTile(newIndex);
     }
   }
 
   private resizeWithKeyboard(direction: 'up' | 'down' | 'left' | 'right') {
     const isVertical = this.isVerticalSplit();
-    const resizeStep = 5; // Percentage to resize on each key press
-    let newFirstSize: number;
+    const resizeStep = 5;
+    const [first] = this.tiles();
+    let newFirstSize = parseFloat(isVertical ? first.width : first.height);
 
-    if (isVertical) {
-      newFirstSize = parseFloat(this.tiles()[0].width);
-      if (direction === 'left') newFirstSize -= resizeStep;
-      if (direction === 'right') newFirstSize += resizeStep;
-    } else {
-      newFirstSize = parseFloat(this.tiles()[0].height);
-      if (direction === 'up') newFirstSize -= resizeStep;
-      if (direction === 'down') newFirstSize += resizeStep;
-    }
+    if (['left', 'up'].includes(direction)) newFirstSize -= resizeStep;
+    if (['right', 'down'].includes(direction)) newFirstSize += resizeStep;
 
     newFirstSize = Math.max(10, Math.min(90, newFirstSize));
+    this.updateTileSizes(newFirstSize);
+  }
+
+  private resize(event: MouseEvent) {
+    const isVertical = this.isVerticalSplit();
+    const delta = isVertical ? event.clientX - this.startX() : event.clientY - this.startY();
+    const containerSize = isVertical ? this.containerWidth() : this.containerHeight();
+    const percentageDelta = (delta / containerSize) * 100;
+
+    const startSize = parseFloat(isVertical ? this.startWidths()[0] : this.startHeights()[0]);
+    let newFirstSize = startSize + percentageDelta;
+
+    if (newFirstSize > 10 && newFirstSize < 90) {
+      this.updateTileSizes(newFirstSize);
+    }
+  }
+
+  private updateTileSizes(newFirstSize: number) {
+    const isVertical = this.isVerticalSplit();
     const newSecondSize = 100 - newFirstSize;
 
     this.tiles.update(([first, second]) => [
@@ -188,45 +211,12 @@ export class TileViewComponent implements OnInit, AfterViewInit {
     ]);
   }
 
-  private resize(event: MouseEvent) {
-    const isVertical = this.isVerticalSplit();
-    const dx = event.clientX - this.startX;
-    const dy = event.clientY - this.startY;
-    const percentageDelta = isVertical
-      ? (dx / this.containerWidth) * 100
-      : (dy / this.containerHeight) * 100;
-
-    let newFirstSize = isVertical
-      ? parseFloat(this.startWidths[0]) + percentageDelta
-      : parseFloat(this.startHeights[0]) + percentageDelta;
-    let newSecondSize = 100 - newFirstSize;
-
-    if (newFirstSize > 10 && newSecondSize > 10) {
-      this.tiles.update(([first, second]) => [
-        {
-          ...first,
-          width: isVertical ? `${newFirstSize}%` : '100%',
-          height: isVertical ? '100%' : `${newFirstSize}%`,
-        },
-        {
-          ...second,
-          width: isVertical ? `${newSecondSize}%` : '100%',
-          height: isVertical ? '100%' : `${newSecondSize}%`,
-        },
-      ]);
-    }
-  }
-
   public focusTile(index: number) {
-    this.tiles.update(
-      (tiles) =>
-        tiles.map((tile, i) => ({ ...tile, focused: i === index })) as [
-          Tile,
-          Tile
-        ]
+    this.tiles.update(tiles =>
+      tiles.map((tile, i) => ({ ...tile, focused: i === index })) as [Tile, Tile]
     );
     this.focusedTileIndex.set(index);
-    this.tileContents.toArray()[index].nativeElement.focus();
+    this.tileContents.get(index)?.nativeElement.focus();
   }
 
   private splitHorizontally() {
