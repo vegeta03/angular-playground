@@ -1,10 +1,11 @@
 @use '../../../../../../../apps/ng-play/src/styles/variables' as *;
 
 :host {
-  --tile-border-color: #{$md-dark-on-primary-container};
-  --tile-background: #{$md-dark-primary-container};
-  --resizer-color: #{$md-dark-secondary-container};
-  --resizer-hover-color: #{$md-dark-on-secondary-container};
+  --tile-border-color: #{$md-dark-outline};
+  --tile-background: #{$md-dark-surface};
+  --tile-focused-background: #{$md-dark-surface-variant};
+  --resizer-color: #{$md-dark-outline-variant};
+  --resizer-hover-color: #{$md-dark-primary};
 
   display: block;
   height: 100vh;
@@ -22,11 +23,17 @@
   flex-grow: 1;
   background-color: var(--tile-background);
   border: 1px solid var(--tile-border-color);
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
-  transition: box-shadow 0.3s ease;
+  box-shadow: $md-dark-elevation-level1;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 
   &:hover {
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.5);
+    box-shadow: $md-dark-elevation-level2;
+  }
+
+  &.focused {
+    background-color: var(--tile-focused-background);
+    border-color: $md-dark-primary;
+    box-shadow: $md-dark-elevation-level3;
   }
 }
 
@@ -34,22 +41,26 @@
   display: flex;
   flex-direction: column;
   height: 100%;
-  color: $md-dark-on-primary-container;
-  font-family: 'Roboto Mono', monospace;
+  color: $md-dark-on-surface;
+  font-family: 'Roboto', sans-serif;
+  outline: none;
 }
 
 .tile-header {
-  background-color: $md-dark-secondary-container;
-  color: $md-dark-on-secondary-container;
-  padding: 4px 8px;
-  font-size: 14px;
-  font-weight: bold;
+  background-color: $md-dark-surface-variant;
+  color: $md-dark-on-surface-variant;
+  padding: 16px;
+  font-size: 16px;
+  font-weight: 500;
+  letter-spacing: 0.1px;
 }
 
 .tile-body {
   flex-grow: 1;
-  padding: 8px;
-  font-size: 12px;
+  padding: 16px;
+  font-size: 14px;
+  line-height: 20px;
+  letter-spacing: 0.25px;
   overflow: auto;
 }
 
@@ -62,7 +73,7 @@
   cursor: col-resize;
   z-index: 1000;
   transform: translateX(-50%);
-  transition: background-color 0.2s ease;
+  transition: background-color 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 
   &:hover, &.active {
     background-color: var(--resizer-hover-color);

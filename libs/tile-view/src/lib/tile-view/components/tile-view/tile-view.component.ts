@@ -1,8 +1,9 @@
-import { Component, HostListener, OnInit, ElementRef, Renderer2 } from '@angular/core';
+import { Component, HostListener, OnInit, ElementRef, Renderer2, AfterViewInit, QueryList, ViewChildren } from '@angular/core';
 import { CommonModule } from '@angular/common';
 
 interface Tile {
   width: string;
+  focused: boolean;
 }
 
 interface Resizer {
@@ -16,10 +17,12 @@ interface Resizer {
   templateUrl: './tile-view.component.html',
   styleUrls: ['./tile-view.component.scss'],
 })
-export class TileViewComponent implements OnInit {
+export class TileViewComponent implements OnInit, AfterViewInit {
+  @ViewChildren('tileContent') tileContents!: QueryList<ElementRef>;
+
   tiles: Tile[] = [
-    { width: '50%' },
-    { width: '50%' }
+    { width: '50%', focused: false },
+    { width: '50%', focused: false }
   ];
   resizers: Resizer[] = [
     { position: '50%' }
@@ -29,12 +32,17 @@ export class TileViewComponent implements OnInit {
   startX: number = 0;
   startWidths: string[] = [];
   containerWidth: number = 0;
+  focusedTileIndex: number = 0;
 
   constructor(private el: ElementRef, private renderer: Renderer2) {}
 
   ngOnInit() {
     this.updateResizerPositions();
     this.containerWidth = this.el.nativeElement.offsetWidth;
+  }
+
+  ngAfterViewInit() {
+    this.focusTile(0);
   }
 
   startResize(event: MouseEvent, index: number) {
@@ -62,6 +70,30 @@ export class TileViewComponent implements OnInit {
     }
   }
 
+  @HostListener('window:keydown', ['$event'])
+  onKeyDown(event: KeyboardEvent) {
+    if (event.altKey && !event.ctrlKey && !event.metaKey) {
+      switch (event.key) {
+        case 'j':
+          this.moveFocus('left');
+          event.preventDefault();
+          break;
+        case 'k':
+          this.moveFocus('down');
+          event.preventDefault();
+          break;
+        case 'l':
+          this.moveFocus('up');
+          event.preventDefault();
+          break;
+        case ';':
+          this.moveFocus('right');
+          event.preventDefault();
+          break;
+      }
+    }
+  }
+
   private resize(event: MouseEvent) {
     const dx = event.clientX - this.startX;
     const percentageDelta = (dx / this.containerWidth) * 100;
@@ -74,6 +106,35 @@ export class TileViewComponent implements OnInit {
       this.tiles[this.activeResizer + 1].width = `${newRightWidth}%`;
       this.updateResizerPositions();
     }
+  }
+
+  private moveFocus(direction: 'left' | 'right' | 'up' | 'down') {
+    let newIndex = this.focusedTileIndex;
+
+    switch (direction) {
+      case 'left':
+        newIndex = Math.max(0, this.focusedTileIndex - 1);
+        break;
+      case 'right':
+        newIndex = Math.min(this.tiles.length - 1, this.focusedTileIndex + 1);
+        break;
+      case 'up':
+      case 'down':
+        // For now, up and down do nothing as we only have a horizontal layout
+        return;
+    }
+
+    if (newIndex !== this.focusedTileIndex) {
+      this.focusTile(newIndex);
+    }
+  }
+
+  public focusTile(index: number) {
+    this.tiles.forEach((tile, i) => {
+      tile.focused = i === index;
+    });
+    this.focusedTileIndex = index;
+    this.tileContents.toArray()[index].nativeElement.focus();
   }
 
   private updateResizerPositions() {

@@ -1,4 +1,4 @@
-// Material Design 3 color palette
+// Material Design 3 color tokens for dark theme
 $md-dark-primary: #D0BCFF;
 $md-dark-on-primary: #381E72;
 $md-dark-primary-container: #4F378B;
@@ -7,5 +7,24 @@ $md-dark-secondary: #CCC2DC;
 $md-dark-on-secondary: #332D41;
 $md-dark-secondary-container: #4A4458;
 $md-dark-on-secondary-container: #E8DEF8;
+$md-dark-tertiary: #EFB8C8;
+$md-dark-on-tertiary: #492532;
+$md-dark-tertiary-container: #633B48;
+$md-dark-on-tertiary-container: #FFD8E4;
+$md-dark-error: #F2B8B5;
+$md-dark-on-error: #601410;
+$md-dark-error-container: #8C1D18;
+$md-dark-on-error-container: #F9DEDC;
 $md-dark-background: #1C1B1F;
 $md-dark-on-background: #E6E1E5;
+$md-dark-surface: #1C1B1F;
+$md-dark-on-surface: #E6E1E5;
+$md-dark-surface-variant: #49454F;
+$md-dark-on-surface-variant: #CAC4D0;
+$md-dark-outline: #938F99;
+$md-dark-outline-variant: #444746;
+
+// Elevation levels
+$md-dark-elevation-level1: 0px 1px 3px 1px rgba(0, 0, 0, 0.15);
+$md-dark-elevation-level2: 0px 2px 6px 2px rgba(0, 0, 0, 0.15);
+$md-dark-elevation-level3: 0px 4px 8px 3px rgba(0, 0, 0, 0.15);
