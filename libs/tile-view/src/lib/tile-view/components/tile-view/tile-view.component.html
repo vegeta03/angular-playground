@@ -8,7 +8,13 @@
     >
       <div #tileContent class="tile-content" tabindex="0" (focus)="focusTile($index)">
         <div class="tile-header">Window {{ $index + 1 }}</div>
-        <div class="tile-body">Content {{ $index + 1 }}</div>
+        <div class="tile-body">
+          Content {{ $index + 1 }}
+          <br>
+          Width: {{ tile.width }}
+          <br>
+          Height: {{ tile.height }}
+        </div>
       </div>
     </div>
   }
@@ -19,4 +25,11 @@
     [style.left]="isVerticalSplit() ? tiles()[0].width : '0'"
     [style.top]="isVerticalSplit() ? '0' : tiles()[0].height"
   ></div>
+</div>
+<div class="debug-info">
+  Container Width: {{ containerWidth() }}px
+  <br>
+  Container Height: {{ containerHeight() }}px
+  <br>
+  Is Resizing: {{ isResizing() }}
 </div>

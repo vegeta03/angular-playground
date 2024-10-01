@@ -14,6 +14,7 @@ import {
   HostBinding,
   Pipe,
   PipeTransform,
+  NgZone,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 
@@ -56,12 +57,13 @@ export class TileViewComponent {
 
   private el = inject(ElementRef);
   private renderer = inject(Renderer2);
+  private ngZone = inject(NgZone);
 
   tiles = signal<[Tile, Tile]>([
-    { width: '100%', height: '50%', focused: true },
-    { width: '100%', height: '50%', focused: false },
+    { width: '50%', height: '100%', focused: true },
+    { width: '50%', height: '100%', focused: false },
   ]);
-  isVerticalSplit = signal(false);
+  isVerticalSplit = signal(true);
   focusedTileIndex = signal(0);
 
   isResizing = signal(false);
@@ -79,12 +81,18 @@ export class TileViewComponent {
 
   constructor() {
     effect(() => {
-      this.containerWidth.set(this.el.nativeElement.offsetWidth);
-      this.containerHeight.set(this.el.nativeElement.offsetHeight);
+      this.updateContainerSize();
     });
   }
 
+  private updateContainerSize() {
+    this.containerWidth.set(this.el.nativeElement.offsetWidth);
+    this.containerHeight.set(this.el.nativeElement.offsetHeight);
+    console.log('Container size updated:', this.containerWidth(), this.containerHeight());
+  }
+
   startResize(event: MouseEvent) {
+    console.log('Resize started');
     this.isResizing.set(true);
     this.startX.set(event.clientX);
     this.startY.set(event.clientY);
@@ -92,23 +100,33 @@ export class TileViewComponent {
     this.startHeights.set(this.tiles().map((tile) => tile.height));
     this.renderer.addClass(event.target, 'active');
     event.preventDefault();
+    console.log('isResizing:', this.isResizing());
   }
 
   @HostListener('window:mousemove', ['$event'])
   onMouseMove(event: MouseEvent) {
     if (!this.isResizing()) return;
-    requestAnimationFrame(() => this.resize(event));
+    console.log('Mouse moving');
+    this.ngZone.run(() => {
+      this.resize(event);
+    });
   }
 
   @HostListener('window:mouseup')
   onMouseUp() {
     if (!this.isResizing()) return;
+    console.log('Resize ended');
     this.isResizing.set(false);
     const activeResizerElement =
       this.el.nativeElement.querySelector('.resizer.active');
     if (activeResizerElement) {
       this.renderer.removeClass(activeResizerElement, 'active');
     }
+  }
+
+  @HostListener('window:resize')
+  onResize() {
+    this.updateContainerSize();
   }
 
   @HostListener('window:keydown', ['$event'])
@@ -180,14 +198,17 @@ export class TileViewComponent {
   }
 
   private resize(event: MouseEvent) {
+    console.log('Resizing');
     const isVertical = this.isVerticalSplit();
     const delta = isVertical ? event.clientX - this.startX() : event.clientY - this.startY();
     const containerSize = isVertical ? this.containerWidth() : this.containerHeight();
+    console.log('Container size:', containerSize);
     const percentageDelta = (delta / containerSize) * 100;
 
     const startSize = parseFloat(isVertical ? this.startWidths()[0] : this.startHeights()[0]);
     const newFirstSize = startSize + percentageDelta;
 
+    console.log('New size:', newFirstSize);
     if (newFirstSize > 10 && newFirstSize < 90) {
       this.updateTileSizes(newFirstSize);
     }
@@ -197,6 +218,7 @@ export class TileViewComponent {
     const isVertical = this.isVerticalSplit();
     const newSecondSize = 100 - newFirstSize;
 
+    console.log('Updating tiles:', newFirstSize, newSecondSize);
     this.tiles.update(([first, second]) => [
       {
         ...first,
