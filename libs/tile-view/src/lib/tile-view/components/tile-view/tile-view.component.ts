@@ -30,8 +30,8 @@ type Tile = {
 export class ResizerDirective {
   @Input() isVertical!: boolean;
   @HostBinding('class.vertical') get vertical() { return this.isVertical; }
-  @HostBinding('style.left') @Input() left: string = '0';
-  @HostBinding('style.top') @Input() top: string = '0';
+  @HostBinding('style.left') @Input() left = '0';
+  @HostBinding('style.top') @Input() top = '0';
 }
 
 @Pipe({
@@ -186,7 +186,7 @@ export class TileViewComponent {
     const percentageDelta = (delta / containerSize) * 100;
 
     const startSize = parseFloat(isVertical ? this.startWidths()[0] : this.startHeights()[0]);
-    let newFirstSize = startSize + percentageDelta;
+    const newFirstSize = startSize + percentageDelta;
 
     if (newFirstSize > 10 && newFirstSize < 90) {
       this.updateTileSizes(newFirstSize);
