@@ -94,8 +94,9 @@ export class TileViewComponent {
   startResize(event: MouseEvent) {
     console.log('Resize started');
     this.isResizing.set(true);
-    this.startX.set(event.clientX);
-    this.startY.set(event.clientY);
+    const containerRect = this.el.nativeElement.getBoundingClientRect();
+    this.startX.set(event.clientX - containerRect.left);
+    this.startY.set(event.clientY - containerRect.top);
     this.startWidths.set(this.tiles().map((tile) => tile.width));
     this.startHeights.set(this.tiles().map((tile) => tile.height));
     this.renderer.addClass(event.target, 'active');
@@ -107,8 +108,10 @@ export class TileViewComponent {
   onMouseMove(event: MouseEvent) {
     if (!this.isResizing()) return;
     console.log('Mouse moving');
-    this.ngZone.run(() => {
-      this.resize(event);
+    requestAnimationFrame(() => {
+      this.ngZone.run(() => {
+        this.resize(event);
+      });
     });
   }
 
@@ -200,18 +203,21 @@ export class TileViewComponent {
   private resize(event: MouseEvent) {
     console.log('Resizing');
     const isVertical = this.isVerticalSplit();
-    const delta = isVertical ? event.clientX - this.startX() : event.clientY - this.startY();
-    const containerSize = isVertical ? this.containerWidth() : this.containerHeight();
-    console.log('Container size:', containerSize);
-    const percentageDelta = (delta / containerSize) * 100;
-
-    const startSize = parseFloat(isVertical ? this.startWidths()[0] : this.startHeights()[0]);
-    const newFirstSize = startSize + percentageDelta;
-
-    console.log('New size:', newFirstSize);
-    if (newFirstSize > 10 && newFirstSize < 90) {
-      this.updateTileSizes(newFirstSize);
+    const containerRect = this.el.nativeElement.getBoundingClientRect();
+    const containerSize = isVertical ? containerRect.width : containerRect.height;
+    
+    let newPosition: number;
+    if (isVertical) {
+      newPosition = event.clientX - containerRect.left;
+    } else {
+      newPosition = event.clientY - containerRect.top;
     }
+
+    const newPercentage = (newPosition / containerSize) * 100;
+    const clampedPercentage = Math.max(10, Math.min(90, newPercentage));
+
+    console.log('New percentage:', clampedPercentage);
+    this.updateTileSizes(clampedPercentage);
   }
 
   private updateTileSizes(newFirstSize: number) {
